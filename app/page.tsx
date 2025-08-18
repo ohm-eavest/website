@@ -47,7 +47,7 @@ export default function Page() {
                 <div className="relative right-0 top-70 transform translate-x-200 -translate-y-250 pl-8 space-y-8 z-30 max-w-200">
                     {/* Section 1: Text */}
                     <div className="text-white ">
-                        <h1 className={'{taviraj.className} text-6xl '}>Nous sommes Eavest <br/> et les produits structurés <br/>
+                            <h1 className={'{taviraj.className} text-6xl '}>Noumake s sommes Eavest <br/> et les produits structurés <br/>
                             sont notre terrain de jeu.</h1>
                     </div>
 
@@ -86,7 +86,7 @@ export default function Page() {
 
                     {/* Nos Produits */}
                     <a
-                        href="#nos-produits"
+                        href="/nos-produits"
                         className="text-white hover:text-gray-300 text-sm whitespace-nowrap px-1 py-0.5"
                     >
                         NOS PRODUITS

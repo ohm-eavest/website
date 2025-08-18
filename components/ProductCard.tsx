@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Product } from '../app/lib/placeholder-data'; // Import the Product type
+import { useRouter } from 'next/navigation';
 
 interface ProductCardProps extends Product {}
 
@@ -14,6 +15,7 @@ const ProductCard = ({
                          status,
                          family,
                      }: ProductCardProps) => {
+    const router = useRouter();
     // Get the background color based on the family
     const backgroundColor = {
         autocall: 'bg-white', // White
@@ -51,7 +53,10 @@ const ProductCard = ({
             <h1 className="text-gray-700 text-2xl">{startDate}</h1>
 
             {/* Discover button */}
-            <button className="bg-transparent text-black border border-black px-1 py-0.5 rounded-full hover:bg-gray-900 hover:text-white ransition duration-300 whitespace-nowrap">
+            <button 
+                onClick={() => router.push(`/nos-produits/${isin}`)}
+                className="bg-transparent text-black border border-black px-1 py-0.5 rounded-full hover:bg-gray-900 hover:text-white transition duration-300 whitespace-nowrap"
+            >
                 <span>Discover</span>
                 <span>→</span> {/* Arrow pointing right */}
             </button>
