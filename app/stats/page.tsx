@@ -11,8 +11,8 @@ import {
     UserIcon,
     CogIcon,
     ArrowRightOnRectangleIcon,
-    TrendingUpIcon,
-    TrendingDownIcon,
+    ArrowTrendingUpIcon,
+    ArrowTrendingDownIcon,
     CalendarIcon,
     CurrencyEuroIcon
 } from '@heroicons/react/24/outline';
@@ -286,7 +286,7 @@ export default function StatsPage() {
                                     <p className="text-gray-800 text-sm font-medium">Performance YTD</p>
                                     <p className="text-2xl font-bold text-black mt-2">+24.1%</p>
                                 </div>
-                                <TrendingUpIcon className="h-8 w-8 text-green-500" />
+                                <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
                             </div>
                         </div>
                         <div className="bg-gray-300/20 backdrop-blur-sm rounded-lg p-6 hover:bg-white transition-colors duration-300">
@@ -295,7 +295,7 @@ export default function StatsPage() {
                                     <p className="text-gray-800 text-sm font-medium">Meilleur Produit</p>
                                     <p className="text-2xl font-bold text-black mt-2">+42.7%</p>
                                 </div>
-                                <TrendingUpIcon className="h-8 w-8 text-green-500" />
+                                <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
                             </div>
                         </div>
                         <div className="bg-gray-300/20 backdrop-blur-sm rounded-lg p-6 hover:bg-white transition-colors duration-300">
@@ -304,7 +304,7 @@ export default function StatsPage() {
                                     <p className="text-gray-800 text-sm font-medium">Pire Produit</p>
                                     <p className="text-2xl font-bold text-black mt-2">-3.2%</p>
                                 </div>
-                                <TrendingDownIcon className="h-8 w-8 text-red-500" />
+                                <ArrowTrendingDownIcon className="h-8 w-8 text-red-500" />
                             </div>
                         </div>
                         <div className="bg-gray-300/20 backdrop-blur-sm rounded-lg p-6 hover:bg-white transition-colors duration-300">
@@ -384,8 +384,8 @@ export default function StatsPage() {
                                         </div>
                                         <div className="flex items-center space-x-3">
                                             <span className="text-xl font-bold text-black">{metric.value}</span>
-                                            {metric.trend === 'up' && <TrendingUpIcon className="h-5 w-5 text-green-500" />}
-                                            {metric.trend === 'down' && <TrendingDownIcon className="h-5 w-5 text-red-500" />}
+                                            {metric.trend === 'up' && <ArrowTrendingUpIcon className="h-5 w-5 text-green-500" />}
+                                            {metric.trend === 'down' && <ArrowTrendingDownIcon className="h-5 w-5 text-red-500" />}
                                             {metric.trend === 'neutral' && <div className="w-5 h-5 bg-gray-400 rounded-full"></div>}
                                         </div>
                                     </div>
