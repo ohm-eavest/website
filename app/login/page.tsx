@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { authAPI } from '../../utils/auth';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -13,22 +14,22 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(''); // Clear previous errors
 
-        // Send credentials to the server
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-        });
-
-        if (response.ok) {
+        try {
+            // Use the auth API utility instead of direct fetch
+            const data = await authAPI.login(email, password);
+            
+            // Store tokens and user data in localStorage
+            localStorage.setItem('access_token', data.access);
+            localStorage.setItem('refresh_token', data.refresh);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
             // Redirect to the dashboard on successful login
             router.push('/dashboard');
-        } else {
-            // Show error message
-            setError('Invalid email or password');
+        } catch (error: any) {
+            console.error('Login error:', error);
+            setError(error.message || 'Login failed. Please try again.');
         }
     };
 

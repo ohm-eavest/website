@@ -6,6 +6,17 @@ export type Blog = {
     onButtonClick?: () => void; // Optional button click handler
 };
 
+export type Consultant = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    jobTitle: string;
+    region: string;
+    linkedInUrl: string;
+    profileImage: string;
+    summary: string;
+};
+
 export type Product = {
     name: string;
     startDate: string;
@@ -525,4 +536,57 @@ export const currentUser = {
         photo: '/advisor-photo.jpg'
     }
 } as User;
+
+export const consultantsByRegion: { [key: string]: Consultant } = {
+    'ile-de-france': {
+        id: '1',
+        firstName: 'Marie',
+        lastName: 'Martin',
+        jobTitle: 'Conseillère Financière Senior',
+        region: 'Île-de-France',
+        linkedInUrl: 'https://linkedin.com/in/marie-martin',
+        profileImage: '/consultants/marie-martin.jpg',
+        summary: 'Spécialisée dans les produits structurés depuis 8 ans, Marie accompagne les investisseurs institutionnels et privés de la région parisienne.'
+    },
+    'auvergne-rhone-alpes': {
+        id: '2',
+        firstName: 'Pierre',
+        lastName: 'Dubois',
+        jobTitle: 'Conseiller Financier',
+        region: 'Auvergne-Rhône-Alpes',
+        linkedInUrl: 'https://linkedin.com/in/pierre-dubois',
+        profileImage: '/consultants/pierre-dubois.jpg',
+        summary: 'Expert en investissements alternatifs, Pierre développe notre présence dans la région Rhône-Alpes avec une approche personnalisée.'
+    },
+    'provence-alpes-cote-azur': {
+        id: '3',
+        firstName: 'Sophie',
+        lastName: 'Lefebvre',
+        jobTitle: 'Conseillère Patrimoine',
+        region: 'Provence-Alpes-Côte d\'Azur',
+        linkedInUrl: 'https://linkedin.com/in/sophie-lefebvre',
+        profileImage: '/consultants/sophie-lefebvre.jpg',
+        summary: 'Forte de 12 ans d\'expérience en gestion de patrimoine, Sophie conseille une clientèle haut de gamme sur la Côte d\'Azur.'
+    },
+    'occitanie': {
+        id: '4',
+        firstName: 'Thomas',
+        lastName: 'Moreau',
+        jobTitle: 'Conseiller Investissement',
+        region: 'Occitanie',
+        linkedInUrl: 'https://linkedin.com/in/thomas-moreau',
+        profileImage: '/consultants/thomas-moreau.jpg',
+        summary: 'Thomas développe notre activité dans le Sud-Ouest avec une expertise particulière sur les produits à capital garanti.'
+    },
+    'nouvelle-aquitaine': {
+        id: '5',
+        firstName: 'Claire',
+        lastName: 'Bernard',
+        jobTitle: 'Conseillère Financière',
+        region: 'Nouvelle-Aquitaine',
+        linkedInUrl: 'https://linkedin.com/in/claire-bernard',
+        profileImage: '/consultants/claire-bernard.jpg',
+        summary: 'Spécialisée dans l\'accompagnement des entreprises familiales, Claire apporte son expertise sur toute la région Nouvelle-Aquitaine.'
+    }
+};
 

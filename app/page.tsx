@@ -7,12 +7,14 @@ import ProductsIntro from '../components//ProductsIntro';
 import AcmeLogo from '../app/ui/acme-logo';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Counter from '../components/counter';
 import MethodoSection from "../components/methodologie";
 import { Taviraj } from 'next/font/google';
 import ToolsCard from "../components/ToolsCard";
 import ToolsBand from "../components/ToolsBand";
 import BlogSection from "../components/BlogSection";
+import TeamSection from '../components/TeamSection';
 import Footer from '../components/Footer';
 // Configure the Taviraj font
 const taviraj = Taviraj({
@@ -22,8 +24,8 @@ const taviraj = Taviraj({
 });
 
 export default function Page() {
-    // @ts-ignore
-    // @ts-ignore
+    const router = useRouter();
+    
     return (
         <main className="flex min-h-screen flex-col p-6 bg-black">
 
@@ -47,7 +49,7 @@ export default function Page() {
                 <div className="relative right-0 top-70 transform translate-x-200 -translate-y-250 pl-8 space-y-8 z-30 max-w-200">
                     {/* Section 1: Text */}
                     <div className="text-white ">
-                            <h1 className={'{taviraj.className} text-6xl '}>Noumake s sommes Eavest <br/> et les produits structurés <br/>
+                            <h1 className={'{taviraj.className} text-6xl '}>Nous sommes Eavest <br/> et les produits structurés <br/>
                             sont notre terrain de jeu.</h1>
                     </div>
 
@@ -61,10 +63,12 @@ export default function Page() {
                     {/* Section 3: Buttons */}
                     <div className="flex space-x-4">
                         {/* Button 1: Commencer */}
-                        <button className="bg-black text-gray-200 border border-white px-6 py-0.5 rounded-full hover:bg-gray-600   hover:text-gray-100 transition duration-300 whitespace-nowrap">
-                            <span>Commencer </span>
-                            <span>→</span> {/* Arrow pointing right */}
-                        </button>
+                        <Link href="/register">
+                            <button className="bg-black text-gray-200 border border-white px-6 py-0.5 rounded-full hover:bg-gray-600   hover:text-gray-100 transition duration-300 whitespace-nowrap">
+                                <span>Commencer </span>
+                                <span>→</span> {/* Arrow pointing right */}
+                            </button>
+                        </Link>
 
                         {/* Button 2: Decouvrir notre equipe */}
                         <button className="bg-blue-500 text-black px-6 py-0.5 rounded-full flex items-center space-x-2 hover:bg-blue-600 hover:text-white transition duration-300 whitespace-nowrap">
@@ -101,12 +105,12 @@ export default function Page() {
                     </a>
 
                     {/* Commencer */}
-                    <a
-                        href="#commencer"
+                    <Link
+                        href="/register"
                         className="text-white bg-black rounded-full hover:bg-gray-900 text-sm whitespace-nowrap px-1 py-0.5"
                     >
                         COMMENCER
-                    </a>
+                    </Link>
 
                     {/* Mon Espace Client */}
                     <a
@@ -152,17 +156,9 @@ export default function Page() {
                     </div>
                 </div>
 
-                {/* Hero Section */}
+                {/* Team Section */}
                 <div className="relative right-0 top-70 transform -translate-y-150 z-50">
-                    <MethodoSection
-                        backgroundImage="/methodo.png" // Replace with your image path
-                        title="Une méthode éprouvée et fiable"
-                        buttonText="Découvrir notre méthodologie"
-                        onButtonClick={() => {
-                            // Handle button click
-                            console.log('Button clicked!');
-                        }}
-                    />
+                    <TeamSection />
                 </div>
             </div>
 
@@ -180,11 +176,10 @@ export default function Page() {
             <div className="relative right-0 top-70 transform -translate-y-50 z-50">
                 <MethodoSection
                     backgroundImage="/inscription.jpg" // Replace with your image path
-                    title="Devenez membre et decouvrez l’expertise Eavest"
+                    title="Devenez membre et decouvrez l'expertise Eavest"
                     buttonText="Commencez"
                     onButtonClick={() => {
-                        // Handle button click
-                        console.log('Button clicked!');
+                        router.push('/register');
                     }}
                 />
             </div>

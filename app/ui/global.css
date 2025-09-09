@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/* France Map transparent background - specific to map components only */
+.france-map-container {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.france-map-container svg {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Hide react-simple-maps specific elements only */
+.rsm-svg {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Hide the "Sélectionnez votre région" title only in SVG context */
+svg title,
+svg desc {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Hide specific aria-labels only in map context */
+svg[aria-label*="Sélectionnez"],
+svg[aria-label*="selectionnez"],
+svg[aria-label*="region"] {
+    background: transparent !important;
+}
+
+svg[title*="Sélectionnez"],
+svg[title*="selectionnez"] {
+    display: none !important;
+    visibility: hidden !important;
+}
 
 input[type='number'] {
     -moz-appearance: textfield;

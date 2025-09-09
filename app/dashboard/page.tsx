@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { alerts, userPortfolio, wishlist, currentUser } from '../lib/placeholder-data';
 import { Taviraj } from 'next/font/google';
+import { isAuthenticated, getUser, authAPI, User } from '../../utils/auth';
 
 // Configure the Taviraj font
 const taviraj = Taviraj({
@@ -31,19 +32,38 @@ export default function DashboardPage() {
     const router = useRouter();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [navigationStyle, setNavigationStyle] = useState('vertical');
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check if the user is authenticated (e.g., by checking a cookie)
-        const isAuthenticated = document.cookie.includes('isAuthenticated=true');
+        const checkAuthentication = async () => {
+            // Check if the user is authenticated using JWT tokens
+            if (!isAuthenticated()) {
+                router.push('/login');
+                return;
+            }
 
-        // Redirect to login if not authenticated
-        if (!isAuthenticated) {
-            router.push('/login');
-        }
+            try {
+                // Get user data from localStorage or fetch from API
+                let userData = getUser();
+                if (!userData) {
+                    // If no user data in localStorage, fetch from API
+                    userData = await authAPI.getProfile();
+                }
+                setUser(userData);
+            } catch (error) {
+                console.error('Authentication check failed:', error);
+                router.push('/login');
+                return;
+            }
 
-        // Load navigation style from localStorage
-        const savedNavigationStyle = localStorage.getItem('navigationStyle') || 'vertical';
-        setNavigationStyle(savedNavigationStyle);
+            // Load navigation style from localStorage
+            const savedNavigationStyle = localStorage.getItem('navigationStyle') || 'vertical';
+            setNavigationStyle(savedNavigationStyle);
+            setIsLoading(false);
+        };
+
+        checkAuthentication();
     }, [router]);
 
     const navItems = [
@@ -66,6 +86,20 @@ export default function DashboardPage() {
             default: return 'ℹ️';
         }
     };
+
+    // Show loading state while checking authentication
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-black">
+                <div className="text-white text-xl">Loading...</div>
+            </div>
+        );
+    }
+
+    // Don't render dashboard if user is not loaded
+    if (!user) {
+        return null;
+    }
 
     return (
         <div 
@@ -110,13 +144,15 @@ export default function DashboardPage() {
                                 className="bg-gray-900 rounded-full px-6 py-2 flex items-center space-x-3 hover:bg-gray-800 transition-colors duration-200"
                             >
                                 <div className="text-right">
-                                    <p className="text-white font-medium">{currentUser.name}</p>
-                                    <p className="text-gray-300 text-sm">{currentUser.email}</p>
+                                    <p className="text-white font-medium">
+                                        {user ? `${user.first_name} ${user.last_name}` : 'Loading...'}
+                                    </p>
+                                    <p className="text-gray-300 text-sm">{user?.email || ''}</p>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                                         <span className="text-white font-bold text-sm">
-                                            {currentUser.name.split(' ').map(n => n[0]).join('')}
+                                            {user ? `${user.first_name[0] || ''}${user.last_name[0] || ''}` : 'U'}
                                         </span>
                                     </div>
                                     <ChevronDownIcon className={`h-4 w-4 text-gray-300 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -127,8 +163,11 @@ export default function DashboardPage() {
                             {isDropdownOpen && (
                                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
                                     <div className="px-4 py-2 border-b border-gray-200">
-                                        <p className="font-medium text-gray-900">{currentUser.name}</p>
-                                        <p className="text-gray-600 text-sm">{currentUser.email}</p>
+                                        <p className="font-medium text-gray-900">
+                                            {user ? `${user.first_name} ${user.last_name}` : 'Loading...'}
+                                        </p>
+                                        <p className="text-gray-600 text-sm">{user?.email || ''}</p>
+                                        <p className="text-gray-500 text-xs">{user?.role || ''}</p>
                                     </div>
                                     
                                     <button
@@ -155,9 +194,13 @@ export default function DashboardPage() {
                                     
                                     <div className="border-t border-gray-200 mt-2 pt-2">
                                         <button
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 setIsDropdownOpen(false);
-                                                document.cookie = 'isAuthenticated=false; path=/';
+                                                try {
+                                                    await authAPI.logout();
+                                                } catch (error) {
+                                                    console.error('Logout error:', error);
+                                                }
                                                 router.push('/login');
                                             }}
                                             className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-200"
