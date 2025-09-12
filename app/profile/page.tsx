@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isAuthenticated } from '../../utils/auth';
 import { 
     UserIcon,
     EnvelopeIcon,
@@ -29,9 +30,9 @@ export default function ProfilePage() {
 
     useEffect(() => {
         // Check if the user is authenticated
-        const isAuthenticated = document.cookie.includes('isAuthenticated=true');
-        if (!isAuthenticated) {
+        if (!isAuthenticated()) {
             router.push('/login');
+            return;
         }
     }, [router]);
 

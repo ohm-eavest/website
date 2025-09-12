@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { authAPI } from '../../utils/auth';
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
@@ -18,7 +18,7 @@ export default function LoginPage() {
 
         try {
             // Use the auth API utility instead of direct fetch
-            const data = await authAPI.login(email, password);
+            const data = await authAPI.login(identifier, password);
             
             // Store tokens and user data in localStorage
             localStorage.setItem('access_token', data.access);
@@ -88,11 +88,11 @@ export default function LoginPage() {
                         Identifiant
                     </label>
                     <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        type="text"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
                         className="w-full p-2 no-border border-gray-700 rounded bg-transparent text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transform -translate-x-2"
-                        placeholder="Entrez votre email"
+                        placeholder="Entrez votre email ou nom d'utilisateur"
                         required
                     />
                 </div>

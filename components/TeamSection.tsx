@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Taviraj } from 'next/font/google';
 import FranceMap from './FranceMap';
 import ConsultantModal from './ConsultantModal';
@@ -36,7 +37,14 @@ const TeamSection: React.FC = () => {
 
     return (
         <div className="relative bg-black py-16">
-            <div className="max-w-7xl mx-auto px-6">
+            <motion.div 
+                className="max-w-7xl mx-auto px-6"
+                animate={{ 
+                    opacity: isModalOpen ? 0 : 1,
+                    filter: isModalOpen ? 'blur(4px)' : 'blur(0px)'
+                }}
+                transition={{ duration: 0.3 }}
+            >
                 <div className="flex flex-col lg:flex-row items-center gap-12">
                     {/* Left Section - Text Content */}
                     <div className="flex-1 text-white">
@@ -91,15 +99,19 @@ const TeamSection: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Consultant Modal */}
-            <ConsultantModal
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-                consultant={selectedConsultant}
-                selectedRegion={selectedRegion}
-            />
+            <AnimatePresence initial={false}>
+                {isModalOpen ? (
+                    <ConsultantModal
+                        onClose={handleCloseModal}
+                        consultant={selectedConsultant}
+                        selectedRegion={selectedRegion}
+                        key="consultant-modal"
+                    />
+                ) : null}
+            </AnimatePresence>
         </div>
     );
 };

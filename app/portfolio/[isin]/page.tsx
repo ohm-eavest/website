@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { logout } from '../../../utils/auth';
 import { 
     ArrowLeftIcon,
     ChevronDownIcon,
@@ -330,8 +331,7 @@ export default function ProductDetailPage() {
                                     <button
                                         onClick={() => {
                                             setIsDropdownOpen(false);
-                                            document.cookie = 'isAuthenticated=false; path=/';
-                                            router.push('/login');
+                                            logout();
                                         }}
                                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-200"
                                     >

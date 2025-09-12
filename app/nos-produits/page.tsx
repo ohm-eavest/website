@@ -1,11 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Footer from '../../components/Footer';
 import ProductCard from '../../components/ProductCard';
-import { products } from '../lib/placeholder-data';
+import { Product } from '../lib/placeholder-data';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Taviraj } from 'next/font/google';
+import { productAPI, isAuthenticated } from '../../utils/auth';
+import { useRouter } from 'next/navigation';
 
 const taviraj = Taviraj({
     weight: ['300', '400', '500', '600', '700'],
@@ -14,6 +16,85 @@ const taviraj = Taviraj({
 });
 
 export default function NosProduitsPage() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const router = useRouter();
+
+    useEffect(() => {
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+            router.push('/login');
+            return;
+        }
+
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const data = await productAPI.getProducts({ limit: 50 });
+                // Map Django products to frontend format
+                const mappedProducts = data.results?.map((product: any) => ({
+                    name: product.label,
+                    startDate: new Date(product.launch_date).toLocaleDateString('fr-FR', { 
+                        month: 'short', 
+                        year: 'numeric' 
+                    }),
+                    isin: product.isin,
+                    issuer: product.deliver || 'Unknown',
+                    underlying: product.category || 'Unknown',
+                    status: 'Not started' as const, // Map based on your needs
+                    family: 'autocall' as const // Map based on your needs
+                })) || [];
+                setProducts(mappedProducts);
+            } catch (err) {
+                console.error('Error fetching products:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load products');
+                if (err instanceof Error && err.message === 'Authentication failed') {
+                    router.push('/login');
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, [router]);
+
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) return;
+        
+        try {
+            setLoading(true);
+            const data = await productAPI.getProducts({ 
+                search: searchTerm,
+                limit: 50 
+            });
+            // Map Django products to frontend format
+            const mappedProducts = data.results?.map((product: any) => ({
+                name: product.label,
+                startDate: new Date(product.launch_date).toLocaleDateString('fr-FR', { 
+                    month: 'short', 
+                    year: 'numeric' 
+                }),
+                isin: product.isin,
+                issuer: product.deliver || 'Unknown',
+                underlying: product.category || 'Unknown',
+                status: 'Not started' as const,
+                family: 'autocall' as const
+            })) || [];
+            setProducts(mappedProducts);
+        } catch (err) {
+            console.error('Error searching products:', err);
+            setError(err instanceof Error ? err.message : 'Failed to search products');
+            if (err instanceof Error && err.message === 'Authentication failed') {
+                router.push('/login');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex min-h-screen flex-col bg-black">
             <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-900 shadow-lg rounded-full flex space-x-6 z-50 whitespace-nowrap items-center">
@@ -71,10 +152,17 @@ export default function NosProduitsPage() {
                             <input
                                 type="text"
                                 placeholder="Rechercher un produit..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                                 className="flex-1 bg-transparent text-white px-4 py-3 focus:outline-none placeholder-gray-400"
                             />
-                            <button className="bg-blue-500 text-white px-6 py-3 hover:bg-blue-600 transition duration-300">
-                                Rechercher
+                            <button 
+                                onClick={handleSearch}
+                                disabled={loading}
+                                className="bg-blue-500 text-white px-6 py-3 hover:bg-blue-600 transition duration-300 disabled:opacity-50"
+                            >
+                                {loading ? 'Chargement...' : 'Rechercher'}
                             </button>
                         </div>
                     </div>
@@ -154,7 +242,7 @@ export default function NosProduitsPage() {
                             </button>
                         </div>
 
-                        <div className="flex-1">
+                        <div className="flex-1">the model
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-white text-2xl font-semibold">Produits disponibles</h2>
                                 <div className="flex items-center space-x-4">
@@ -169,12 +257,26 @@ export default function NosProduitsPage() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {products.map((product) => (
-                                    <ProductCard
-                                        key={product.isin}
-                                        {...product}
-                                    />
-                                ))}
+                                {loading ? (
+                                    <div className="col-span-full flex justify-center items-center py-12">
+                                        <div className="text-white text-xl">Chargement des produits...</div>
+                                    </div>
+                                ) : error ? (
+                                    <div className="col-span-full flex justify-center items-center py-12">
+                                        <div className="text-red-500 text-xl">Erreur: {error}</div>
+                                    </div>
+                                ) : products.length === 0 ? (
+                                    <div className="col-span-full flex justify-center items-center py-12">
+                                        <div className="text-gray-400 text-xl">Aucun produit trouvé</div>
+                                    </div>
+                                ) : (
+                                    products.map((product) => (
+                                        <ProductCard
+                                            key={product.isin}
+                                            {...product}
+                                        />
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>

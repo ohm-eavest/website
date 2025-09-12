@@ -16,6 +16,29 @@ const ProductCard = ({
                          family,
                      }: ProductCardProps) => {
     const router = useRouter();
+
+    const handleDiscoverClick = async () => {
+        try {
+            // Call the backend endpoint first
+            const response = await fetch(`/api/products/isin/${encodeURIComponent(isin)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch product details');
+            }
+
+            // If successful, navigate to the product page
+            router.push(`/nos-produits/${isin}`);
+        } catch (error) {
+            console.error('Error fetching product details:', error);
+            // Still navigate even if API call fails (fallback behavior)
+            router.push(`/nos-produits/${isin}`);
+        }
+    };
     // Get the background color based on the family
     const backgroundColor = {
         autocall: 'bg-white', // White
@@ -47,14 +70,14 @@ const ProductCard = ({
             className={`${backgroundColor} w-[300px] h-[400px] rounded-lg shadow-lg p-6 flex flex-col space-y-4 hover:bg-[url('/card_background.png')] hover:bg-cover hover:bg-center transition-all duration-300`}
         >
             {/* Name of the product */}
-            <h2 className="text-4xl font-bold">{name}</h2>
+            <h2 className="text-xl font-bold">{name}</h2>
 
             {/* Starting date */}
             <h1 className="text-gray-700 text-2xl">{startDate}</h1>
 
             {/* Discover button */}
             <button 
-                onClick={() => router.push(`/nos-produits/${isin}`)}
+                onClick={handleDiscoverClick}
                 className="bg-transparent text-black border border-black px-1 py-0.5 rounded-full hover:bg-gray-900 hover:text-white transition duration-300 whitespace-nowrap"
             >
                 <span>Discover</span>

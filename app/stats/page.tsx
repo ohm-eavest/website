@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { isAuthenticated, logout } from '../../utils/auth';
 import { 
     HomeIcon, 
     BriefcaseIcon, 
@@ -91,9 +92,9 @@ export default function StatsPage() {
     const [navigationStyle, setNavigationStyle] = useState('vertical');
 
     useEffect(() => {
-        const isAuthenticated = document.cookie.includes('isAuthenticated=true');
-        if (!isAuthenticated) {
+        if (!isAuthenticated()) {
             router.push('/login');
+            return;
         }
 
         const savedNavigationStyle = localStorage.getItem('navigationStyle') || 'vertical';
@@ -236,8 +237,7 @@ export default function StatsPage() {
                                         <button
                                             onClick={() => {
                                                 setIsDropdownOpen(false);
-                                                document.cookie = 'isAuthenticated=false; path=/';
-                                                router.push('/login');
+                                                logout();
                                             }}
                                             className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-200"
                                         >

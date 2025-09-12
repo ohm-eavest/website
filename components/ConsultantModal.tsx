@@ -2,6 +2,7 @@
 "use client";
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Taviraj } from 'next/font/google';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Consultant } from '../app/lib/placeholder-data';
@@ -15,14 +16,12 @@ const taviraj = Taviraj({
 });
 
 interface ConsultantModalProps {
-    isOpen: boolean;
     onClose: () => void;
     consultant: Consultant | null;
     selectedRegion: string;
 }
 
 const ConsultantModal: React.FC<ConsultantModalProps> = ({
-    isOpen,
     onClose,
     consultant,
     selectedRegion
@@ -34,18 +33,41 @@ const ConsultantModal: React.FC<ConsultantModalProps> = ({
         setImageError(false);
     }, [consultant?.profileImage]);
     
-    if (!isOpen || !consultant) return null;
+    if (!consultant) return null;
 
     const handleLinkedInClick = () => {
         window.open(consultant.linkedInUrl, '_blank');
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-grey backdrop-blur rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <motion.div 
+            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{
+                duration: 0.9,
+                ease: [0.23, 1, 0.32, 1],
+                scale: {
+                    type: "spring",
+                    damping: 20,
+                    stiffness: 300
+                }
+            }}
+        >
+            {/* Background overlay */}
+            <div
+                className="absolute inset-0 bg-black bg-opacity-50"
+                onClick={onClose}
+            />
+            
+            {/* Modal content */}
+            <div className="bg-grey backdrop-blur rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto relative z-10">
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 pb-3">
-                    <h2 className={`text-3xl font-normal text-white ${taviraj.className}`}>Nos conseillers</h2>
+                    <h2 className={`text-3xl font-normal text-white ${taviraj.className}`}>
+                        Nos conseillers
+                    </h2>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -134,7 +156,7 @@ const ConsultantModal: React.FC<ConsultantModalProps> = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

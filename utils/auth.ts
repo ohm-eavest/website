@@ -11,14 +11,20 @@ export interface User {
 
 export const authAPI = {
   // Login user
-  login: async (email: string, password: string) => {
+  login: async (identifier: string, password: string) => {
+    // Determine if identifier is email or username
+    const isEmail = identifier.includes('@');
+    const loginData = isEmail 
+      ? { email: identifier, password }
+      : { username: identifier, password };
+
     const response = await fetch(`${API_BASE_URL}/api/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(loginData),
     });
 
     if (!response.ok) {
@@ -199,4 +205,230 @@ export const refreshToken = async () => {
   } catch (error) {
     logout();
   }
+};
+
+// Product API functions
+export const productAPI = {
+  // Get products with optional filtering
+  getProducts: async (options?: {
+    search?: string;
+    category?: string;
+    family?: string;
+    limit?: number;
+  }) => {
+    const token = getAccessToken();
+    if (!token) throw new Error('No access token');
+
+    const params = new URLSearchParams();
+    if (options?.search) params.append('search', options.search);
+    if (options?.category) params.append('category', options.category);
+    if (options?.family) params.append('family', options.family);
+    if (options?.limit) params.append('limit', options.limit.toString());
+
+    const url = `${API_BASE_URL}/api/products/${params.toString() ? `?${params.toString()}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Try to refresh token
+        await refreshToken();
+        const newToken = getAccessToken();
+        if (newToken) {
+          const retryResponse = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+            },
+            credentials: 'include',
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json();
+          }
+        }
+        logout();
+        throw new Error('Authentication failed');
+      }
+      throw new Error('Failed to fetch products');
+    }
+
+    return response.json();
+  },
+
+  // Get single product by ID
+  getProduct: async (id: number) => {
+    const token = getAccessToken();
+    if (!token) throw new Error('No access token');
+
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await refreshToken();
+        const newToken = getAccessToken();
+        if (newToken) {
+          const retryResponse = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+            },
+            credentials: 'include',
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json();
+          }
+        }
+        logout();
+        throw new Error('Authentication failed');
+      }
+      throw new Error('Failed to fetch product');
+    }
+
+    return response.json();
+  },
+
+  // Get single product by ISIN
+  getProductByIsin: async (isin: string) => {
+    const token = getAccessToken();
+    console.log('ISIN API: Starting request for ISIN:', isin);
+    console.log('ISIN API: Access token:', token ? 'Present' : 'Missing');
+    
+    if (!token) {
+      console.error('ISIN API: No access token found');
+      throw new Error('No access token');
+    }
+
+    const makeRequest = async (authToken: string) => {
+      console.log('ISIN API: Making request with token:', authToken.substring(0, 20) + '...');
+      const headers = {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      };
+      console.log('ISIN API: Request headers:', headers);
+      
+      return fetch(`${API_BASE_URL}/api/products/isin/${isin}/`, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include',
+      });
+    };
+
+    let response = await makeRequest(token);
+    console.log('ISIN API: Response status:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.log('ISIN API: Token expired, attempting refresh...');
+        try {
+          await refreshToken();
+          const newToken = getAccessToken();
+          if (newToken && newToken !== token) {
+            console.log('ISIN API: Token refreshed, retrying request...');
+            response = await makeRequest(newToken);
+            if (response.ok) {
+              return response.json();
+            }
+          }
+          console.error('ISIN API: Token refresh failed or token unchanged');
+          logout();
+          throw new Error('Authentication failed - please log in again');
+        } catch (refreshError) {
+          console.error('ISIN API: Token refresh error:', refreshError);
+          logout();
+          throw new Error('Authentication failed - please log in again');
+        }
+      }
+      
+      if (response.status === 404) {
+        throw new Error(`Product not found with ISIN: ${isin}`);
+      }
+      
+      // Log the actual error details for debugging
+      const errorText = await response.text();
+      console.error(`ISIN API Error: ${response.status} - ${response.statusText}`, errorText);
+      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // Get categories
+  getCategories: async () => {
+    const token = getAccessToken();
+    if (!token) throw new Error('No access token');
+
+    const response = await fetch(`${API_BASE_URL}/api/categories/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await refreshToken();
+        const newToken = getAccessToken();
+        if (newToken) {
+          const retryResponse = await fetch(`${API_BASE_URL}/api/categories/`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+            },
+            credentials: 'include',
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json();
+          }
+        }
+        logout();
+        throw new Error('Authentication failed');
+      }
+      throw new Error('Failed to fetch categories');
+    }
+
+    return response.json();
+  },
+
+  // Get product stats
+  getProductStats: async () => {
+    const token = getAccessToken();
+    if (!token) throw new Error('No access token');
+
+    const response = await fetch(`${API_BASE_URL}/api/product-stats/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await refreshToken();
+        const newToken = getAccessToken();
+        if (newToken) {
+          const retryResponse = await fetch(`${API_BASE_URL}/api/product-stats/`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+            },
+            credentials: 'include',
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json();
+          }
+        }
+        logout();
+        throw new Error('Authentication failed');
+      }
+      throw new Error('Failed to fetch product stats');
+    }
+
+    return response.json();
+  },
 };

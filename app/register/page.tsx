@@ -75,7 +75,7 @@ export default function RegisterPage() {
 
     return (
         <div 
-            className="min-h-screen text-white"
+            className="min-h-screen text-white relative"
             style={{
                 backgroundImage: "url('/client _background.jpg')",
                 backgroundSize: 'cover',
@@ -83,6 +83,11 @@ export default function RegisterPage() {
                 backgroundRepeat: 'no-repeat'
             }}
         >
+            {/* Dark overlay */}
+            <div className="absolute inset-0 bg-black/40 z-0"></div>
+            
+            {/* Content wrapper */}
+            <div className="relative z-10">
             {/* Top Bar */}
             <div className="w-full p-4 flex justify-between items-center">
                 <Link href="/" className="text-white hover:text-gray-300 text-sm">
@@ -338,6 +343,7 @@ export default function RegisterPage() {
                         </form>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );
