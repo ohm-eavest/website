@@ -1,30 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Types for Django backend response
+// Types for Django backend response matching PrdProduct model
 interface DjangoPrdProduct {
     id: number;
     label: string;
     isin: string;
-    deliver: string;
-    family: string;
-    category: string;
+    deliver?: string;
+    family?: string;
+    category?: string;
     launch_date: string;
     due_date: string;
-    coupon: number;
-    id_prd_status: number;
-    capital_guaranteed: boolean;
-    performance: number;
-    // Add other fields as needed
-}
-
-interface DjangoPrdStatus {
-    id: number;
-    code: string;
-    description: string;
+    coupon?: number;
+    coupon_year: number;
+    capital_guaranteed?: boolean;
+    performance?: number;
+    guarantor?: string;
+    // Foreign key fields
+    status?: {
+        id: number;
+        code: string;
+        description: string;
+    };
+    deliver_relation?: {
+        id: number;
+        deliver?: string;
+        groups?: string;
+        nationality?: string;
+    };
+    sousjacent?: {
+        id: number;
+        label: string;
+        type?: string;
+    };
 }
 
 // Map Django backend fields to frontend Product type
-function mapDjangoProductToFrontend(djangoProduct: DjangoPrdProduct, status?: DjangoPrdStatus) {
+function mapDjangoProductToFrontend(djangoProduct: DjangoPrdProduct) {
     // Map family to match frontend enum
     const familyMap: { [key: string]: string } = {
         'Autocall': 'autocall',
@@ -43,8 +54,8 @@ function mapDjangoProductToFrontend(djangoProduct: DjangoPrdProduct, status?: Dj
         'REIMB': 'Reimbursed'
     };
 
-    const mappedFamily = familyMap[djangoProduct.family] || 'undefined';
-    const mappedStatus = status ? (statusMap[status.code] || 'Not started') : 'Not started';
+    const mappedFamily = familyMap[djangoProduct.family || ''] || 'undefined';
+    const mappedStatus = djangoProduct.status ? (statusMap[djangoProduct.status.code] || 'Not started') : 'Not started';
 
     // Format launch date to match frontend format (e.g., "Fév. 2025")
     const launchDate = new Date(djangoProduct.launch_date);
@@ -56,8 +67,8 @@ function mapDjangoProductToFrontend(djangoProduct: DjangoPrdProduct, status?: Dj
         name: djangoProduct.label,
         startDate: formattedDate,
         isin: djangoProduct.isin,
-        issuer: djangoProduct.deliver || 'Unknown',
-        underlying: djangoProduct.category || 'Unknown',
+        issuer: djangoProduct.deliver_relation?.deliver || djangoProduct.deliver || djangoProduct.guarantor || 'Unknown',
+        underlying: djangoProduct.sousjacent?.label || djangoProduct.category || 'Unknown',
         status: mappedStatus as 'Not started' | 'Started' | 'Ended' | 'Reimbursed',
         family: mappedFamily as 'autocall' | 'cln' | 'participation' | 'phoenix' | 'protection' | 'reverse' | 'undefined'
     };
@@ -121,14 +132,15 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
         
-        // Map Django products to frontend format
+        // Return raw Django data and mapped products for compatibility
         const mappedProducts = data.results?.map((product: DjangoPrdProduct) => 
             mapDjangoProductToFrontend(product)
         ) || [];
 
         return NextResponse.json({
-            products: mappedProducts,
-            count: data.count || mappedProducts.length,
+            results: data.results, // Return raw Django data with relationships
+            products: mappedProducts, // Also include mapped version for backward compatibility
+            count: data.count || data.results?.length || 0,
             next: data.next,
             previous: data.previous
         });

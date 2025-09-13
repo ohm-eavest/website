@@ -33,6 +33,10 @@ export default function NosProduitsPage() {
             try {
                 setLoading(true);
                 const data = await productAPI.getProducts({ limit: 50 });
+                console.log('Django API response:', data);
+                console.log('First product:', data.results?.[0]);
+                console.log('All fields of first product:', Object.keys(data.results?.[0] || {}));
+                
                 // Map Django products to frontend format
                 const mappedProducts = data.results?.map((product: any) => ({
                     name: product.label,
@@ -41,10 +45,16 @@ export default function NosProduitsPage() {
                         year: 'numeric' 
                     }),
                     isin: product.isin,
-                    issuer: product.deliver || 'Unknown',
-                    underlying: product.category || 'Unknown',
-                    status: 'Not started' as const, // Map based on your needs
-                    family: 'autocall' as const // Map based on your needs
+                    issuer: product.emetteur || 'Unknown',
+                    underlying: product.sous_jacents || 'Unknown',
+                    status: product.status?.code === 'LIVE' || product.family ? 'Started' as const : 'Not started' as const,
+                    family: product.family?.toLowerCase() === 'autocall' ? 'autocall' as const :
+                           product.family?.toLowerCase() === 'cln' ? 'cln' as const :
+                           product.family?.toLowerCase() === 'participation' ? 'participation' as const :
+                           product.family?.toLowerCase() === 'phoenix' ? 'phoenix' as const :
+                           product.family?.toLowerCase() === 'protection' ? 'protection' as const :
+                           product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
+                           'undefined' as const
                 })) || [];
                 setProducts(mappedProducts);
             } catch (err) {
@@ -78,10 +88,16 @@ export default function NosProduitsPage() {
                     year: 'numeric' 
                 }),
                 isin: product.isin,
-                issuer: product.deliver || 'Unknown',
-                underlying: product.category || 'Unknown',
-                status: 'Not started' as const,
-                family: 'autocall' as const
+                issuer: product.emetteur || 'Unknown',
+                underlying: product.sous_jacents || 'Unknown',
+                status: product.status?.code === 'LIVE' || product.family ? 'Started' as const : 'Not started' as const,
+                family: product.family?.toLowerCase() === 'autocall' ? 'autocall' as const :
+                       product.family?.toLowerCase() === 'cln' ? 'cln' as const :
+                       product.family?.toLowerCase() === 'participation' ? 'participation' as const :
+                       product.family?.toLowerCase() === 'phoenix' ? 'phoenix' as const :
+                       product.family?.toLowerCase() === 'protection' ? 'protection' as const :
+                       product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
+                       'undefined' as const
             })) || [];
             setProducts(mappedProducts);
         } catch (err) {
@@ -184,7 +200,7 @@ export default function NosProduitsPage() {
                                     </label>
                                     <label className="flex items-center">
                                         <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Phoenix</span>
+                                        <span className="text-gray-300">CLN</span>
                                     </label>
                                     <label className="flex items-center">
                                         <input type="checkbox" className="mr-3 accent-blue-500" />
@@ -192,7 +208,19 @@ export default function NosProduitsPage() {
                                     </label>
                                     <label className="flex items-center">
                                         <input type="checkbox" className="mr-3 accent-blue-500" />
+                                        <span className="text-gray-300">Phoenix</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input type="checkbox" className="mr-3 accent-blue-500" />
                                         <span className="text-gray-300">Protection</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input type="checkbox" className="mr-3 accent-blue-500" />
+                                        <span className="text-gray-300">Reverse</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input type="checkbox" className="mr-3 accent-blue-500" />
+                                        <span className="text-gray-300">Undefined</span>
                                     </label>
                                 </div>
                             </div>

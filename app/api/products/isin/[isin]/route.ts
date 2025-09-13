@@ -1,52 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Types for Django backend response
+// Types for Django backend response matching PrdProduct model
 interface DjangoPrdProduct {
     id: number;
-    label: string;
-    isin: string;
-    deliver: string;
-    family: string;
-    category: string;
-    launch_date: string;
+    created_at?: string;
+    created_by?: number;
+    updated_at?: string;
+    updated_by?: number;
+    airbag_barrier_label?: string;
+    autocall_barrier_label?: string;
+    capital_guaranteed?: boolean;
+    category?: string;
+    coupon_barrier_label?: string;
+    coupon?: number;
+    time_to_next_obs?: number;
+    emetteur: string;
+    distance?: number;
     due_date: string;
-    coupon: number;
-    coupon_year: number;
-    capital_protection: number;
-    protection_barrier: number;
-    coupon_barrier: number;
-    reimbursement_barrier: number;
-    id_prd_status: number;
-    capital_guaranteed: boolean;
-    performance: number;
-    // Add more fields as needed for detailed view
-}
-
-interface DjangoPrdStatus {
-    id: number;
-    code: string;
-    description: string;
-}
-
-interface DjangoDeliverTable {
-    id: number;
-    deliver: string;
-    groups: string;
-    nationality: string;
-}
-
-interface DjangoPrdSousjacent {
-    id: number;
+    end_date?: string;
+    family?: string;
+    guarantor?: string;
+    has_fease?: boolean;
+    has_marketing_doc?: boolean;
+    has_term_sheet?: boolean;
+    indexation_level?: string;
+    best_seller?: boolean;
+    is_eavest?: boolean;
+    isin: string;
     label: string;
-    type: string;
+    launch_date: string;
+    next_obs_date?: string;
+    nominal?: number;
+    observation_frequency?: string;
+    path?: string;
+    performance?: number;
+    performance_year?: number;
+    airbag_barrier?: number;
+    coupon_barrier?: number;
+    protection_barrier?: number;
+    reimbursement_barrier?: number;
+    protection_barrier_label?: string;
+    start_price?: number;
+    strike?: number;
+    subscribe_end_date?: string;
+    subscribe_start_date?: string;
+    capital_protection: number;
+    encrypted_id?: string;
+    note_priips?: number;
+    coupon_year: number;
+    coupon_label?: string;
+    remb_manual?: boolean;
+    simplified?: boolean;
+    // Foreign key fields
+    currency?: {
+        id: number;
+        code?: string;
+        label?: string;
+    };
+    sousjacent?: {
+        id: number;
+        label: string;
+        type?: string;
+    };
+    status?: {
+        id: number;
+        code: string;
+        description: string;
+    };
+    category_relation?: {
+        id: number;
+        // Add category fields as needed
+    };
+    deliver_relation?: {
+        id: number;
+        deliver?: string;
+        groups?: string;
+        nationality?: string;
+    };
+}
+
+interface DjangoPrdCurrency {
+    id: number;
+    code?: string;
+    label?: string;
 }
 
 // Map Django backend fields to frontend Product type with full details
 function mapDjangoProductToFrontendDetailed(
-    djangoProduct: DjangoPrdProduct, 
-    status?: DjangoPrdStatus,
-    deliver?: DjangoDeliverTable,
-    sousjacents?: DjangoPrdSousjacent[]
+    djangoProduct: DjangoPrdProduct
 ) {
     // Map family to match frontend enum
     const familyMap: { [key: string]: string } = {
@@ -66,8 +107,8 @@ function mapDjangoProductToFrontendDetailed(
         'REIMB': 'Reimbursed'
     };
 
-    const mappedFamily = familyMap[djangoProduct.family] || 'undefined';
-    const mappedStatus = status ? (statusMap[status.code] || 'Not started') : 'Not started';
+    const mappedFamily = familyMap[djangoProduct.family || ''] || 'undefined';
+    const mappedStatus = djangoProduct.status ? (statusMap[djangoProduct.status.code] || 'Not started') : 'Not started';
 
     // Format launch date to match frontend format
     const launchDate = new Date(djangoProduct.launch_date);
@@ -75,20 +116,18 @@ function mapDjangoProductToFrontendDetailed(
                        'Juil.', 'Août', 'Sep.', 'Oct.', 'Nov.', 'Déc.'];
     const formattedDate = `${monthNames[launchDate.getMonth()]} ${launchDate.getFullYear()}`;
 
-    // Build underlying string from sousjacents
-    const underlyingString = sousjacents && sousjacents.length > 0 
-        ? sousjacents.map(s => s.label).join(', ')
-        : djangoProduct.category || 'Unknown';
+    // Build underlying string from sousjacent
+    const underlyingString = djangoProduct.sousjacent?.label || djangoProduct.category || 'Unknown';
 
     const baseProduct = {
         name: djangoProduct.label,
         startDate: formattedDate,
         isin: djangoProduct.isin,
-        issuer: deliver?.deliver || djangoProduct.deliver || 'Unknown',
+        issuer: djangoProduct.emetteur|| 'Unknown',
         underlying: underlyingString,
         status: mappedStatus as 'Not started' | 'Started' | 'Ended' | 'Reimbursed',
         family: mappedFamily as 'autocall' | 'cln' | 'participation' | 'phoenix' | 'protection' | 'reverse' | 'undefined',
-        summary: `Produit structuré ${djangoProduct.family.toLowerCase()} avec coupon de ${djangoProduct.coupon_year}% annuel.`
+        summary: `Produit structuré ${(djangoProduct.family || '').toLowerCase()} avec coupon de ${djangoProduct.coupon_year}% annuel.`
     };
 
     // Add detailed characteristics if available
@@ -96,16 +135,22 @@ function mapDjangoProductToFrontendDetailed(
         return {
             ...baseProduct,
             characteristics: {
-                emetteur: deliver?.deliver || djangoProduct.deliver || 'Unknown',
-                devise: 'EUR', // Default, could be mapped from currency table
-                categorie: djangoProduct.family,
+                emetteur: djangoProduct.emetteur || 'Unknown',
+                devise: djangoProduct.currency?.code || djangoProduct.currency?.label || 'EUR',
+                categorie: djangoProduct.family || djangoProduct.category || 'Unknown',
                 sousJacents: underlyingString,
-                barriereCoupon: djangoProduct.coupon_barrier ? `${Math.round(djangoProduct.coupon_barrier * 100)}%` : 'N/A',
-                observations: djangoProduct.capital_guaranteed ? 'Capital garanti' : 'Capital non garanti',
-                coupon: `${djangoProduct.coupon_year}%`,
-                niveauInitial: '100%',
-                barriereRappel: djangoProduct.reimbursement_barrier ? `${Math.round(djangoProduct.reimbursement_barrier * 100)}%` : 'N/A',
-                barriereProtection: djangoProduct.protection_barrier ? `${Math.round(djangoProduct.protection_barrier * 100)}%` : 'N/A'
+                barriereCoupon: djangoProduct.coupon_barrier ? `${Math.round(djangoProduct.coupon_barrier * 100)}%` : 
+                               djangoProduct.coupon_barrier_label || 'N/A',
+                observations: djangoProduct.capital_guaranteed ? 'Capital garanti' : 
+                             djangoProduct.has_term_sheet ? 'Documentation disponible' : 
+                             djangoProduct.simplified ? 'Version simplifiée' : 'Capital non garanti',
+                coupon: djangoProduct.coupon_label || `${djangoProduct.coupon_year}%`,
+                niveauInitial: djangoProduct.start_price ? `${Math.round(djangoProduct.start_price * 100)}%` : '100%',
+                barriereRappel: djangoProduct.reimbursement_barrier ? `${Math.round(djangoProduct.reimbursement_barrier * 100)}%` : 
+                               djangoProduct.autocall_barrier_label || 'N/A',
+                barriereProtection: djangoProduct.protection_barrier ? `${Math.round(djangoProduct.protection_barrier * 100)}%` : 
+                                   djangoProduct.protection_barrier_label || 
+                                   djangoProduct.airbag_barrier ? `${Math.round(djangoProduct.airbag_barrier * 100)}%` : 'N/A'
             },
             analyseEavest: {
                 analyseRisque: 'Analyse des risques en cours de développement avec les données réelles du produit.',
@@ -194,16 +239,12 @@ export async function GET(
 
         const data = await response.json();
         
-        // Map Django product to frontend format with full details
-        const mappedProduct = mapDjangoProductToFrontendDetailed(
-            data.product,
-            data.status,
-            data.deliver,
-            data.sousjacents
-        );
+        // Return both raw Django data and mapped product for compatibility
+        const mappedProduct = mapDjangoProductToFrontendDetailed(data);
 
         return NextResponse.json({
-            product: mappedProduct,
+            product: data, // Return raw Django data with relationships
+            mappedProduct: mappedProduct, // Also include mapped version if needed
             success: true
         });
 

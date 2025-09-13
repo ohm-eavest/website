@@ -161,9 +161,11 @@ export default function ProductDetailPage() {
                         <h1 className={`${taviraj.className} text-5xl font-bold mb-6`}>
                             {product.label}
                         </h1>
-                        <p className="text-xl text-gray-300 max-w-4xl mx-auto">
-                            ISIN: {product.isin} – Échéance: {product.due_date}
-                        </p>
+                        <div className="text-xl text-gray-300 max-w-4xl mx-auto text-center">
+                            <p>ISIN: {product.isin}</p>
+                            <p>Statut: {product.status_code || "N/A"}</p>
+                            <p>Échéance: {new Date(product.due_date).toLocaleDateString('fr-FR')}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -179,42 +181,42 @@ export default function ProductDetailPage() {
                             <div className="space-y-4">
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
                                     <span className="font-medium">Émetteur:</span>
-                                    <span>{product.id_prd_currency || "N/A"}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-700 pb-2">
-                                    <span className="font-medium">Devise:</span>
-                                    <span>{product.deliver || "EUR"}</span>
+                                    <span>{ product.emetteur || "N/A"}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
                                     <span className="font-medium">Catégorie:</span>
-                                    <span>{product.family}</span>
+                                    <span>{product.family || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-gray-700 pb-2">
+                                    <span className="font-medium">Devise:</span>
+                                    <span>{product.currency_code || "EUR"}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
                                     <span className="font-medium">Sous-jacents:</span>
-                                    <span>{product.sousjacents?.join(", ")}</span>
+                                    <span>{product.sous_jacents || "N/A"}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
-                                    <span className="font-medium">Barrière de coupon:</span>
-                                    <span>{product.coupon_barrier}</span>
+                                    <span className="font-medium">Indicateur de risque SRI:</span>
+                                    <span>{product.note_priips ? `${product.note_priips}/7` : "N/A"}</span>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
-                                    <span className="font-medium">Coupon:</span>
-                                    <span>{product.coupon}%</span>
+                                    <span className="font-medium">Maturité:</span>
+                                    <span>{new Date(product.due_date).toLocaleDateString('fr-FR')}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
-                                    <span className="font-medium">Niveau Initial:</span>
-                                    <span>{product.strike}</span>
+                                    <span className="font-medium">Coupon:</span>
+                                    <span>{product.coupon_label || `${product.coupon_year}%` || `${product.coupon}%` || "N/A"}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
                                     <span className="font-medium">Barrière de rappel:</span>
-                                    <span>{product.autocall_barrier_label}</span>
+                                    <span>{product.autocall_barrier_label || (product.reimbursement_barrier ? `${Math.round(product.reimbursement_barrier * 100)}%` : "N/A")}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-700 pb-2">
                                     <span className="font-medium">Barrière de protection:</span>
-                                    <span>{product.protection_barrier_label}</span>
+                                    <span>{product.protection_barrier_label || (product.protection_barrier ? `${Math.round(product.protection_barrier * 100)}%` : product.airbag_barrier ? `${Math.round(product.airbag_barrier * 100)}%` : "N/A")}</span>
                                 </div>
                             </div>
                         </div>
