@@ -23,7 +23,7 @@ export type Product = {
     isin: string;
     issuer: string;
     underlying: string;
-    status: 'Not started' | 'Started' | 'Ended' | 'Reimbursed';
+    status: 'Not started' | 'Started' | 'Ended' | 'Reimbursed' | 'On request';
     family: 'autocall' | 'cln' | 'participation' | 'phoenix' | 'protection' | 'reverse' | 'undefined';
     summary?: string;
     characteristics?: {

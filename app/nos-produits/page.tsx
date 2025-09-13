@@ -22,6 +22,7 @@ export default function NosProduitsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         categories: [] as string[],
+        statuses: [] as string[],
         riskLevels: [] as string[],
         durations: [] as string[]
     });
@@ -58,32 +59,124 @@ export default function NosProduitsPage() {
                     filterParams.family = djangoFamilies.join(',');
                 }
                 
+                // Add status filters
+                if (appliedFilters?.statuses && appliedFilters.statuses.length > 0) {
+                    // Map French status names to actual Django database status codes
+                    const statusMapping: { [key: string]: string } = {
+                        'Non démarré': 'IDLE,SUBSCRIBABLE',  // Map to both IDLE and SUBSCRIBABLE
+                        'En cours de vie': 'ON_GOING',
+                        'Remboursé à son terme': 'PREPAYED',
+                        'Remboursé par anticipation': 'REFUNDED', 
+                        'Sur demande': 'SIMPLIFIED'
+                    };
+                    const djangoStatuses = appliedFilters.statuses.map(status => statusMapping[status]).filter(Boolean);
+                    if (djangoStatuses.length > 0) {
+                        filterParams.status = djangoStatuses.join(',');
+                    }
+                }
+                
                 console.log('API parameters:', filterParams);
+                console.log('🔍 Status filter debug:', {
+                    originalStatuses: appliedFilters?.statuses,
+                    mappedStatuses: appliedFilters?.statuses?.map(status => {
+                        const statusMapping: { [key: string]: string } = {
+                            'Non démarré': 'IDLE,SUBSCRIBABLE',
+                            'En cours de vie': 'ON_GOING',
+                            'Remboursé à son terme': 'PREPAYED',
+                            'Remboursé par anticipation': 'REFUNDED',
+                            'Sur demande': 'SIMPLIFIED'
+                        };
+                        return statusMapping[status];
+                    }),
+                    finalStatusParam: filterParams.status
+                });
                 
                 const data = await productAPI.getProducts(filterParams);
                 console.log('✅ Django API response:', data);
                 console.log('📊 Total products:', data.count);
                 console.log('📄 Current page products:', data.results?.length);
                 
+                // Debug when no results are returned
+                if (data.count === 0 && filterParams.status) {
+                    console.log('❌ No products found for status filter:', {
+                        requestedStatus: filterParams.status,
+                        originalFilter: appliedFilters?.statuses,
+                        suggestion: 'Check if Django has products with this status code'
+                    });
+                }
+                
                 // Map Django products to frontend format
-                const mappedProducts = data.results?.map((product: any) => ({
-                    name: product.label,
-                    startDate: new Date(product.launch_date).toLocaleDateString('fr-FR', { 
-                        month: 'short', 
-                        year: 'numeric' 
-                    }),
-                    isin: product.isin,
-                    issuer: product.emetteur || 'Unknown',
-                    underlying: product.sous_jacents || 'Unknown',
-                    status: product.status?.code === 'LIVE' || product.family ? 'Started' as const : 'Not started' as const,
-                    family: product.family?.toLowerCase() === 'autocall' ? 'autocall' as const :
-                           product.family?.toLowerCase() === 'cln' ? 'cln' as const :
-                           product.family?.toLowerCase() === 'participation' ? 'participation' as const :
-                           product.family?.toLowerCase() === 'phoenix' ? 'phoenix' as const :
-                           product.family?.toLowerCase() === 'protection' ? 'protection' as const :
-                           product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
-                           'undefined' as const
-                })) || [];
+                const isSurDemandeFilterActive = appliedFilters?.statuses?.includes('Sur demande') || false;
+                const mappedProducts = data.results?.map((product: any, index: number) => {
+                    // Handle status mapping - Django might be returning status as string or object
+                    let mappedStatus: 'Not started' | 'Started' | 'Ended' | 'Reimbursed' | 'On request';
+                    
+                    if (typeof product.status === 'string') {
+                        // Django already processed the status and returned it as a string
+                        const statusMap: { [key: string]: 'Not started' | 'Started' | 'Ended' | 'Reimbursed' | 'On request' } = {
+                            'Not started': 'Not started',
+                            'Started': 'Started', 
+                            'Ended': 'Ended',
+                            'Reimbursed': 'Reimbursed',
+                            'On request': 'On request'
+                        };
+                        mappedStatus = statusMap[product.status] || 'Not started';
+                        
+                        // Debug unknown status strings
+                        if (!statusMap[product.status]) {
+                            console.log('🚨 Unknown status string from Django:', {
+                                isin: product.isin,
+                                unknownStatus: product.status,
+                                productName: product.label.substring(0, 20) + '...',
+                                availableStatuses: Object.keys(statusMap)
+                            });
+                        }
+                    } else {
+                        // Status is an object with code property - map actual database codes
+                        mappedStatus = product.status?.code === 'ON_GOING' ? 'Started' as const :
+                               product.status?.code === 'PREPAYED' ? 'Ended' as const :
+                               product.status?.code === 'REFUNDED' ? 'Reimbursed' as const :
+                               product.status?.code === 'IDLE' ? 'Not started' as const :
+                               product.status?.code === 'SUBSCRIBABLE' ? 'Not started' as const :
+                               product.status?.code === 'SIMPLIFIED' ? 'On request' as const :
+                               // Special case: if product has no status but was returned by "Sur demande" filter
+                               (!product.status && isSurDemandeFilterActive) ? 'On request' as const :
+                               'Not started' as const;
+                    }
+                    
+                    // Debug first few products to see actual status values from Django
+                    if (index < 5) {
+                        console.log('🔍 Sample product status from Django:', {
+                            index: index,
+                            isin: product.isin,
+                            statusFromDjango: product.status,
+                            statusType: typeof product.status,
+                            statusCode: product.status?.code,
+                            mappedStatus: mappedStatus,
+                            productName: product.label.substring(0, 20) + '...'
+                        });
+                    }
+                    
+                    return {
+                        name: product.label,
+                        startDate: new Date(product.launch_date).toLocaleDateString('fr-FR', { 
+                            month: 'short', 
+                            year: 'numeric' 
+                        }),
+                        isin: product.isin,
+                        issuer: product.emetteur || 'Unknown',
+                        underlying: product.sous_jacents || 'Unknown',
+                        status: mappedStatus,
+                        family: product.family?.toLowerCase() === 'autocall' ? 'autocall' as const :
+                               product.family?.toLowerCase() === 'cln' ? 'cln' as const :
+                               product.family?.toLowerCase() === 'participation' ? 'participation' as const :
+                               product.family?.toLowerCase() === 'phoenix' ? 'phoenix' as const :
+                               product.family?.toLowerCase() === 'protection' ? 'protection' as const :
+                               product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
+                               product.family?.toLowerCase() === 'reverse' ? 'reverse' as const :
+                               'undefined' as const
+                    };
+                }) || [];
                 
                 setProducts(mappedProducts);
                 setTotalProducts(data.count || 0);
@@ -195,7 +288,7 @@ export default function NosProduitsPage() {
             <div className="flex-1 bg-black">
                 <div className="max-w-7xl mx-auto px-6 py-8">
                     <div className="flex gap-8">
-                        <div className="w-80 bg-gray-900 rounded-lg p-6">
+                        <div className="w-80 bg-gray-900 rounded-lg p-6 relative z-30">
                             <h2 className="text-white text-xl font-semibold mb-6">Filtres</h2>
                             
                             <div className="mb-6">
@@ -205,7 +298,8 @@ export default function NosProduitsPage() {
                                         <label key={category} className="flex items-center">
                                             <input 
                                                 type="checkbox" 
-                                                className="mr-3 accent-blue-500"
+                                                className="mr-3 accent-blue-500 cursor-pointer relative z-10"
+                                                style={{ pointerEvents: 'auto' }}
                                                 checked={filters.categories.includes(category)}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
@@ -228,13 +322,44 @@ export default function NosProduitsPage() {
                             </div>
 
                             <div className="mb-6">
+                                <h3 className="text-white text-lg mb-3">Statut</h3>
+                                <div className="space-y-2">
+                                    {['Non démarré', 'En cours de vie', 'Remboursé à son terme', 'Remboursé par anticipation', 'Sur demande'].map((status) => (
+                                        <label key={status} className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mr-3 accent-blue-500 cursor-pointer relative z-10"
+                                                style={{ pointerEvents: 'auto' }}
+                                                checked={filters.statuses.includes(status)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            statuses: [...prev.statuses, status]
+                                                        }));
+                                                    } else {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            statuses: prev.statuses.filter(s => s !== status)
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-gray-300">{status}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
                                 <h3 className="text-white text-lg mb-3">Niveau de Risque</h3>
                                 <div className="space-y-2">
                                     {['Faible', 'Modéré', 'Élevé'].map((risk) => (
                                         <label key={risk} className="flex items-center">
                                             <input 
                                                 type="checkbox" 
-                                                className="mr-3 accent-blue-500"
+                                                className="mr-3 accent-blue-500 cursor-pointer relative z-10"
+                                                style={{ pointerEvents: 'auto' }}
                                                 checked={filters.riskLevels.includes(risk)}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
@@ -263,7 +388,8 @@ export default function NosProduitsPage() {
                                         <label key={duration} className="flex items-center">
                                             <input 
                                                 type="checkbox" 
-                                                className="mr-3 accent-blue-500"
+                                                className="mr-3 accent-blue-500 cursor-pointer relative z-10"
+                                                style={{ pointerEvents: 'auto' }}
                                                 checked={filters.durations.includes(duration)}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
@@ -293,7 +419,8 @@ export default function NosProduitsPage() {
                                         await fetchProducts(1, filters, searchTerm);
                                     }}
                                     disabled={loading}
-                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50"
+                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50 cursor-pointer relative z-10"
+                                    style={{ pointerEvents: 'auto' }}
                                 >
                                     {loading ? 'Chargement...' : 'Appliquer les filtres'}
                                 </button>
@@ -301,6 +428,7 @@ export default function NosProduitsPage() {
                                     onClick={async () => {
                                         const clearedFilters = {
                                             categories: [],
+                                            statuses: [],
                                             riskLevels: [],
                                             durations: []
                                         };
@@ -308,7 +436,8 @@ export default function NosProduitsPage() {
                                         setCurrentPage(1);
                                         await fetchProducts(1, clearedFilters, searchTerm);
                                     }}
-                                    className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300"
+                                    className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300 cursor-pointer relative z-10"
+                                    style={{ pointerEvents: 'auto' }}
                                 >
                                     Effacer les filtres
                                 </button>

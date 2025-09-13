@@ -56,14 +56,27 @@ const ProductCard = ({
         'Started': '/products/product_status_yellow.png', // Replace with your image path
         'Ended': '/products/product_status_grey.png', // Replace with your image path
         'Reimbursed': '/products/product_status_white.png', // Replace with your image path
+        'On request': '/products/product_status_green.png', // Add green for "Sur demande"
     }[status];
 
     const status_fr = {
-        'Not started': 'NON DEMARRE', // Replace with your image path
-        'Started': 'EN COURS DE VIE', // Replace with your image path
-        'Ended': 'REMBOURSE A SON TERME', // Replace with your image path
-        'Reimbursed': 'REMBOURSE PAR ANTICIPATION', // Replace with your image path
+        'Not started': 'NON DEMARRE',
+        'Started': 'EN COURS DE VIE', 
+        'Ended': 'REMBOURSE A SON TERME',
+        'Reimbursed': 'REMBOURSE PAR ANTICIPATION',
+        'On request': 'SUR DEMANDE',
     }[status];
+
+    // Debug logging for status mapping - focus on "Sur demande" products
+    if (status === 'On request' || isin === 'FRF0000000Z1') {
+        console.log('🎯 ProductCard Debug (Sur demande):', { 
+            isin, 
+            receivedStatus: status,
+            mappedStatusFr: status_fr,
+            name: name,
+            expectedFrenchStatus: 'SUR DEMANDE'
+        });
+    }
 
     return (
         <div

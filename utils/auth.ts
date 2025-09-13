@@ -221,6 +221,7 @@ export const productAPI = {
     search?: string;
     category?: string;
     family?: string;
+    status?: string;
     limit?: number;
     offset?: number;
   }) => {
@@ -231,6 +232,7 @@ export const productAPI = {
     if (options?.search) params.append('search', options.search);
     if (options?.category) params.append('category', options.category);
     if (options?.family) params.append('family', options.family);
+    if (options?.status) params.append('status', options.status);
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.offset) params.append('offset', options.offset.toString());
 
