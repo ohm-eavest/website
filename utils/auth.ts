@@ -9,6 +9,13 @@ export interface User {
   last_name: string;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export const authAPI = {
   // Login user
   login: async (identifier: string, password: string) => {
@@ -215,6 +222,7 @@ export const productAPI = {
     category?: string;
     family?: string;
     limit?: number;
+    offset?: number;
   }) => {
     const token = getAccessToken();
     if (!token) throw new Error('No access token');
@@ -224,6 +232,7 @@ export const productAPI = {
     if (options?.category) params.append('category', options.category);
     if (options?.family) params.append('family', options.family);
     if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
 
     const url = `${API_BASE_URL}/api/products/${params.toString() ? `?${params.toString()}` : ''}`;
 

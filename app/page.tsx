@@ -1,7 +1,8 @@
 "use client"; // Mark this as a Client Component
 import ProductGallery from '../components/ProductGallery'; // Import the ProductGallery component
 import ProductCard from '../components/ProductCard';
-import {products} from '../app/lib/placeholder-data';
+import { useState, useEffect } from 'react';
+import { productAPI, PaginatedResponse } from '../utils/auth';
 import {blogs} from '../app/lib/placeholder-data'
 import ProductsIntro from '../components//ProductsIntro';
 import AcmeLogo from '../app/ui/acme-logo';
@@ -25,6 +26,31 @@ const taviraj = Taviraj({
 
 export default function Page() {
     const router = useRouter();
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [currentPage, setCurrentPage] = useState(0);
+    
+    // Fetch products on component mount
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const response: PaginatedResponse<any> = await productAPI.getProducts({ limit: 6, offset: 0 });
+                setProducts(response.results);
+                setHasMore(response.next !== null);
+                setCurrentPage(0);
+            } catch (err) {
+                console.error('Error fetching products:', err);
+                setError('Failed to load products');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchProducts();
+    }, []);
     
     return (
         <main className="flex min-h-screen flex-col p-6 bg-black">
@@ -168,7 +194,17 @@ export default function Page() {
             </div>
 
             {/* Gallery of Product Cards */}
-            <ProductGallery products={products} />
+            {loading ? (
+                <div className="flex justify-center items-center py-12">
+                    <div className="text-white text-lg">Loading products...</div>
+                </div>
+            ) : error ? (
+                <div className="flex justify-center items-center py-12">
+                    <div className="text-red-400 text-lg">{error}</div>
+                </div>
+            ) : (
+                <ProductGallery products={products} />
+            )}
             <ToolsBand />
             <BlogSection blogs={blogs}/>
 

@@ -86,8 +86,9 @@ const ProductCard = ({
 
             {/* Bottom section */}
             <div className="mt-auto">
-                {/* ISIN, Issuer, and Underlying */}
+                {/* ISIN, Family, Issuer, and Underlying */}
                 <p className="text-lg text-black">{isin}</p>
+                <p className="text-lg text-black font-semibold capitalize">{family}</p>
                 <p className="text-lg text-black">{issuer}</p>
                 <p className="text-lg text-black whitespace-nowrap">{underlying}</p>
 

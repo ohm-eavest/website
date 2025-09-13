@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Footer from '../../components/Footer';
 import ProductCard from '../../components/ProductCard';
-import { Product } from '../lib/placeholder-data';
+import { Product, products as placeholderProducts } from '../lib/placeholder-data';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Taviraj } from 'next/font/google';
 import { productAPI, isAuthenticated } from '../../utils/auth';
@@ -20,22 +20,50 @@ export default function NosProduitsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filters, setFilters] = useState({
+        categories: [] as string[],
+        riskLevels: [] as string[],
+        durations: [] as string[]
+    });
+    const [productsPerPage, setProductsPerPage] = useState(6);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
     const router = useRouter();
 
-    useEffect(() => {
-        // Check if user is authenticated
-        if (!isAuthenticated()) {
-            router.push('/login');
-            return;
-        }
-
-        const fetchProducts = async () => {
+    const fetchProducts = async (page: number = 1, appliedFilters?: typeof filters, search?: string) => {
             try {
                 setLoading(true);
-                const data = await productAPI.getProducts({ limit: 50 });
-                console.log('Django API response:', data);
-                console.log('First product:', data.results?.[0]);
-                console.log('All fields of first product:', Object.keys(data.results?.[0] || {}));
+                console.log(`🔄 Fetching page ${page} with ${productsPerPage} products per page`);
+                console.log('Applied filters:', appliedFilters);
+                console.log('Search term:', search);
+                
+                // Build filter parameters for Django API
+                const filterParams: any = {
+                    limit: productsPerPage,
+                    offset: (page - 1) * productsPerPage,
+                };
+                
+                // Add search term
+                if (search && search.trim()) {
+                    filterParams.search = search.trim();
+                }
+                
+                // Add category filters
+                if (appliedFilters?.categories && appliedFilters.categories.length > 0) {
+                    // Map frontend categories to Django family values
+                    const djangoFamilies = appliedFilters.categories.map(cat => {
+                        return cat.toLowerCase();
+                    });
+                    filterParams.family = djangoFamilies.join(',');
+                }
+                
+                console.log('API parameters:', filterParams);
+                
+                const data = await productAPI.getProducts(filterParams);
+                console.log('✅ Django API response:', data);
+                console.log('📊 Total products:', data.count);
+                console.log('📄 Current page products:', data.results?.length);
                 
                 // Map Django products to frontend format
                 const mappedProducts = data.results?.map((product: any) => ({
@@ -56,59 +84,38 @@ export default function NosProduitsPage() {
                            product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
                            'undefined' as const
                 })) || [];
+                
                 setProducts(mappedProducts);
+                setTotalProducts(data.count || 0);
+                setTotalPages(Math.ceil((data.count || 0) / productsPerPage));
+                
+                console.log('🎯 State updated - Total Pages:', Math.ceil((data.count || 0) / productsPerPage));
+                console.log('🎯 Current Page:', page);
+                
             } catch (err) {
-                console.error('Error fetching products:', err);
+                console.error('❌ Error fetching products:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load products');
                 if (err instanceof Error && err.message === 'Authentication failed') {
                     router.push('/login');
                 }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProducts();
-    }, [router]);
-
-    const handleSearch = async () => {
-        if (!searchTerm.trim()) return;
-        
-        try {
-            setLoading(true);
-            const data = await productAPI.getProducts({ 
-                search: searchTerm,
-                limit: 50 
-            });
-            // Map Django products to frontend format
-            const mappedProducts = data.results?.map((product: any) => ({
-                name: product.label,
-                startDate: new Date(product.launch_date).toLocaleDateString('fr-FR', { 
-                    month: 'short', 
-                    year: 'numeric' 
-                }),
-                isin: product.isin,
-                issuer: product.emetteur || 'Unknown',
-                underlying: product.sous_jacents || 'Unknown',
-                status: product.status?.code === 'LIVE' || product.family ? 'Started' as const : 'Not started' as const,
-                family: product.family?.toLowerCase() === 'autocall' ? 'autocall' as const :
-                       product.family?.toLowerCase() === 'cln' ? 'cln' as const :
-                       product.family?.toLowerCase() === 'participation' ? 'participation' as const :
-                       product.family?.toLowerCase() === 'phoenix' ? 'phoenix' as const :
-                       product.family?.toLowerCase() === 'protection' ? 'protection' as const :
-                       product.family?.toLowerCase() === 'reverse convertible' ? 'reverse' as const :
-                       'undefined' as const
-            })) || [];
-            setProducts(mappedProducts);
-        } catch (err) {
-            console.error('Error searching products:', err);
-            setError(err instanceof Error ? err.message : 'Failed to search products');
-            if (err instanceof Error && err.message === 'Authentication failed') {
-                router.push('/login');
-            }
         } finally {
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+            router.push('/login');
+            return;
+        }
+
+        fetchProducts(1);  // Always start with page 1 on initial load
+    }, [router, productsPerPage]);  // Remove currentPage dependency to avoid infinite loops
+
+    const handleSearch = async () => {
+        setCurrentPage(1);
+        await fetchProducts(1, filters, searchTerm);
     };
 
     return (
@@ -194,93 +201,146 @@ export default function NosProduitsPage() {
                             <div className="mb-6">
                                 <h3 className="text-white text-lg mb-3">Catégorie</h3>
                                 <div className="space-y-2">
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Autocall</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">CLN</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Participation</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Phoenix</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Protection</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Reverse</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Undefined</span>
-                                    </label>
+                                    {['Autocall', 'CLN', 'Participation', 'Phoenix', 'Protection', 'Reverse', 'Undefined'].map((category) => (
+                                        <label key={category} className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mr-3 accent-blue-500"
+                                                checked={filters.categories.includes(category)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            categories: [...prev.categories, category]
+                                                        }));
+                                                    } else {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            categories: prev.categories.filter(c => c !== category)
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-gray-300">{category}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
                             <div className="mb-6">
                                 <h3 className="text-white text-lg mb-3">Niveau de Risque</h3>
                                 <div className="space-y-2">
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Faible</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Modéré</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">Élevé</span>
-                                    </label>
+                                    {['Faible', 'Modéré', 'Élevé'].map((risk) => (
+                                        <label key={risk} className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mr-3 accent-blue-500"
+                                                checked={filters.riskLevels.includes(risk)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            riskLevels: [...prev.riskLevels, risk]
+                                                        }));
+                                                    } else {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            riskLevels: prev.riskLevels.filter(r => r !== risk)
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-gray-300">{risk}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
                             <div className="mb-6">
                                 <h3 className="text-white text-lg mb-3">Durée</h3>
                                 <div className="space-y-2">
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">&lt; 1 an</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">1-3 ans</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">3-5 ans</span>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input type="checkbox" className="mr-3 accent-blue-500" />
-                                        <span className="text-gray-300">5+ ans</span>
-                                    </label>
+                                    {['< 1 an', '1-3 ans', '3-5 ans', '5+ ans'].map((duration) => (
+                                        <label key={duration} className="flex items-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mr-3 accent-blue-500"
+                                                checked={filters.durations.includes(duration)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            durations: [...prev.durations, duration]
+                                                        }));
+                                                    } else {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            durations: prev.durations.filter(d => d !== duration)
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-gray-300">{duration}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
-                            <button className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300">
-                                Effacer les filtres
-                            </button>
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={async () => {
+                                        console.log('Applying filters:', filters);
+                                        setCurrentPage(1);
+                                        await fetchProducts(1, filters, searchTerm);
+                                    }}
+                                    disabled={loading}
+                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50"
+                                >
+                                    {loading ? 'Chargement...' : 'Appliquer les filtres'}
+                                </button>
+                                <button 
+                                    onClick={async () => {
+                                        const clearedFilters = {
+                                            categories: [],
+                                            riskLevels: [],
+                                            durations: []
+                                        };
+                                        setFilters(clearedFilters);
+                                        setCurrentPage(1);
+                                        await fetchProducts(1, clearedFilters, searchTerm);
+                                    }}
+                                    className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300"
+                                >
+                                    Effacer les filtres
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1">the model
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-white text-2xl font-semibold">Produits disponibles</h2>
-                                <div className="flex items-center space-x-4">
-                                    <span className="text-gray-400">Trier par:</span>
-                                    <select className="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option>Date de création</option>
-                                        <option>Nom</option>
-                                        <option>Risque</option>
-                                        <option>Durée</option>
-                                    </select>
+                                <div className="flex items-center space-x-6">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-400">Produits par page:</span>
+                                        <select 
+                                            value={productsPerPage}
+                                            onChange={(e) => setProductsPerPage(Number(e.target.value))}
+                                            className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value={5}>5</option>
+                                            <option value={10}>10</option>
+                                            <option value={20}>20</option>
+                                            <option value={50}>50</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-400">Trier par:</span>
+                                        <select className="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <option>Date de création</option>
+                                            <option>Nom</option>
+                                            <option>Risque</option>
+                                            <option>Durée</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -306,6 +366,140 @@ export default function NosProduitsPage() {
                                     ))
                                 )}
                             </div>
+                            
+                            {/* Pagination Controls */}
+                            {totalProducts > productsPerPage && (
+                                <div className="flex justify-center items-center mt-8 space-x-2 relative z-10">
+                                    {/* First Page */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            console.log('🎯 FIRST PAGE CLICKED!');
+                                            if (currentPage !== 1) {
+                                                setCurrentPage(1);
+                                                fetchProducts(1, filters, searchTerm);
+                                            }
+                                        }}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer z-20"
+                                        style={{ pointerEvents: 'auto' }}
+                                    >
+                                        ≪≪
+                                    </button>
+                                    
+                                    {/* Previous Page */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            console.log('🎯 PREVIOUS PAGE CLICKED!');
+                                            if (currentPage > 1) {
+                                                const newPage = currentPage - 1;
+                                                setCurrentPage(newPage);
+                                                fetchProducts(newPage, filters, searchTerm);
+                                            }
+                                        }}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer z-20"
+                                        style={{ pointerEvents: 'auto' }}
+                                    >
+                                        ≪
+                                    </button>
+                                    
+                                    {/* Previous 5 Pages */}
+                                    {currentPage > 6 && (
+                                        <button
+                                            onClick={async () => {
+                                                const newPage = Math.max(1, currentPage - 5);
+                                                setCurrentPage(newPage);
+                                                await fetchProducts(newPage, filters, searchTerm);
+                                            }}
+                                            className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+                                        >
+                                            -5
+                                        </button>
+                                    )}
+                                    
+                                    {/* Page Numbers */}
+                                    {(() => {
+                                        const pageNumbers = [];
+                                        const startPage = Math.max(1, currentPage - 2);
+                                        const endPage = Math.min(totalPages, currentPage + 2);
+                                        
+                                        for (let i = startPage; i <= endPage; i++) {
+                                            pageNumbers.push(
+                                                <button
+                                                    key={i}
+                                                    onClick={async () => {
+                                                        console.log(`🔢 Page ${i} clicked (current: ${currentPage})`);
+                                                        setCurrentPage(i);
+                                                        await fetchProducts(i, filters, searchTerm);
+                                                    }}
+                                                    className={`px-3 py-2 rounded-lg ${
+                                                        i === currentPage 
+                                                            ? 'bg-blue-600 text-white' 
+                                                            : 'bg-gray-800 text-white hover:bg-gray-700'
+                                                    }`}
+                                                >
+                                                    {i}
+                                                </button>
+                                            );
+                                        }
+                                        return pageNumbers;
+                                    })()}
+                                    
+                                    {/* Next 5 Pages */}
+                                    {(() => {
+                                        return currentPage <= totalPages - 6 && (
+                                            <button
+                                                onClick={async () => {
+                                                    const newPage = Math.min(totalPages, currentPage + 5);
+                                                    setCurrentPage(newPage);
+                                                    await fetchProducts(newPage, filters, searchTerm);
+                                                }}
+                                                className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+                                            >
+                                                +5
+                                            </button>
+                                        );
+                                    })()}
+                                    
+                                    {/* Next Page */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            console.log('🎯 NEXT PAGE CLICKED!');
+                                            if (currentPage < totalPages) {
+                                                const newPage = currentPage + 1;
+                                                setCurrentPage(newPage);
+                                                fetchProducts(newPage, filters, searchTerm);
+                                            }
+                                        }}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer z-20"
+                                        style={{ pointerEvents: 'auto' }}
+                                    >
+                                        ≫
+                                    </button>
+                                    
+                                    {/* Last Page */}
+                                    <button
+                                        onClick={async () => {
+                                            setCurrentPage(totalPages);
+                                            await fetchProducts(totalPages, filters, searchTerm);
+                                        }}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        ≫≫
+                                    </button>
+                                    
+                                    {/* Page Info */}
+                                    <span className="text-white ml-4">
+                                        Page {currentPage} sur {totalPages} 
+                                        ({totalProducts} produits)
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
