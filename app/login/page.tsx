@@ -12,8 +12,8 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const router = useRouter();
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
+        if (e) e.preventDefault();
         setError(''); // Clear previous errors
 
         try {
@@ -59,7 +59,7 @@ export default function LoginPage() {
             </div>
 
             {/* Login Section */}
-            <div className="w-full max-w-md p-6">
+            <form onSubmit={handleLogin} className="w-full max-w-md p-6">
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
                     <img
@@ -117,8 +117,7 @@ export default function LoginPage() {
 
                 {/* Login Button */}
                 <button
-                    type="button" // Changed from "submit" to "button" since we're not using a form
-                    onClick={handleLogin}
+                    type="submit"
                     className="w-full bg-gray-800 text-white p-2 rounded hover:bg-gray-600 transition duration-300"
                 >
                     Connexion
@@ -132,7 +131,7 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-            </div>
+            </form>
         </div>
     );
 }

@@ -148,9 +148,9 @@ function mapDjangoProductToFrontendDetailed(
                 niveauInitial: djangoProduct.start_price ? `${Math.round(djangoProduct.start_price * 100)}%` : '100%',
                 barriereRappel: djangoProduct.reimbursement_barrier ? `${Math.round(djangoProduct.reimbursement_barrier * 100)}%` : 
                                djangoProduct.autocall_barrier_label || 'N/A',
-                barriereProtection: djangoProduct.protection_barrier ? `${Math.round(djangoProduct.protection_barrier * 100)}%` : 
-                                   djangoProduct.protection_barrier_label || 
-                                   djangoProduct.airbag_barrier ? `${Math.round(djangoProduct.airbag_barrier * 100)}%` : 'N/A'
+                barriereProtection: djangoProduct.protection_barrier ? `${Math.round(djangoProduct.protection_barrier * 100)}%` :
+                                   djangoProduct.protection_barrier_label ||
+                                   (djangoProduct.airbag_barrier ? `${Math.round(djangoProduct.airbag_barrier * 100)}%` : 'N/A')
             },
             analyseEavest: {
                 analyseRisque: 'Analyse des risques en cours de développement avec les données réelles du produit.',
@@ -167,10 +167,11 @@ function mapDjangoProductToFrontendDetailed(
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { isin: string } }
+    { params }: { params: Promise<{ isin: string }> }
 ) {
+    const { isin } = await params;
+
     try {
-        const { isin } = params;
 
         if (!isin) {
             return NextResponse.json(
@@ -249,12 +250,12 @@ export async function GET(
         });
 
     } catch (error) {
-        console.error(`Error fetching product ${params.isin} from Django backend:`, error);
+        console.error(`Error fetching product ${isin} from Django backend:`, error);
         console.error('Full error details:', {
             name: error instanceof Error ? error.name : 'Unknown',
             message: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined,
-            isin: params.isin,
+            isin: isin,
             backendUrl: process.env.DJANGO_BACKEND_URL || 'http://localhost:8000'
         });
         
@@ -265,7 +266,7 @@ export async function GET(
                 message: error instanceof Error ? error.message : 'Unknown error',
                 success: false,
                 details: {
-                    isin: params.isin,
+                    isin: isin,
                     timestamp: new Date().toISOString()
                 }
             },

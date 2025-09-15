@@ -1,4 +1,15 @@
-const API_BASE_URL = 'http://localhost:8000';
+// Determine API URL based on environment
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Client-side: use relative URL for proxy
+    return '';
+  }
+  // Server-side: use direct backend URL
+  return process.env.BACKEND_URL || 'http://localhost:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+const USE_PROXY = true; // Use Next.js API routes to proxy backend calls
 
 export interface User {
   id: number;
@@ -21,25 +32,80 @@ export const authAPI = {
   login: async (identifier: string, password: string) => {
     // Determine if identifier is email or username
     const isEmail = identifier.includes('@');
-    const loginData = isEmail 
+    const loginData = isEmail
       ? { email: identifier, password }
       : { username: identifier, password };
 
-    const response = await fetch(`${API_BASE_URL}/api/login/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(loginData),
-    });
+    const loginUrl = USE_PROXY ? '/api/login/' : `${API_BASE_URL}/api/login/`;  // Ensure trailing slash
+    console.log('Attempting login to:', loginUrl);
+    console.log('Login data:', loginData);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.non_field_errors?.[0] || 'Login failed');
+    try {
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(loginData),
+      });
+
+      if (!response.ok) {
+        let errorData;
+        const contentType = response.headers.get('content-type');
+
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            errorData = await response.json();
+            const errorMessage = errorData.non_field_errors?.[0] ||
+                               errorData.error ||
+                               errorData.details ||
+                               'Login failed';
+
+            // Add hint if it's a backend error
+            if (errorData.hint) {
+              console.error('Backend hint:', errorData.hint);
+            }
+
+            throw new Error(errorMessage);
+          } catch (e) {
+            if (e instanceof Error && e.message) {
+              throw e;
+            }
+            console.error('Failed to parse JSON error response');
+            throw new Error(`Login failed with status ${response.status}`);
+          }
+        } else {
+          // Response is not JSON (probably HTML error page)
+          const text = await response.text();
+          console.error('Non-JSON error response:', text.substring(0, 200));
+
+          // Check if it's a Django error page
+          if (text.includes('RuntimeError') || text.includes('Django')) {
+            throw new Error('Backend server error - Please contact support');
+          }
+
+          throw new Error(`Login failed - Server returned status ${response.status}`);
+        }
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON success response:', text.substring(0, 200));
+        throw new Error('Invalid response format from server');
+      }
+
+      const data = await response.json();
+      console.log('Login successful:', data);
+      return data;
+    } catch (error) {
+      console.error('Fetch error details:', error);
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to server. Please ensure the backend is running on http://localhost:8000');
+      }
+      throw error;
     }
-
-    return response.json();
   },
 
   // Register user

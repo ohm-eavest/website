@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Quick fix for Django trailing slash issue on staging
+# Run this on your staging server in the Django backend directory
+
+echo "🔧 Fixing Django trailing slash issue..."
+echo ""
+echo "This script will help fix the RuntimeError about trailing slashes."
+echo ""
+echo "Option 1: Quick Fix (Recommended)"
+echo "================================="
+echo "Add this line to your Django settings.py:"
+echo ""
+echo "APPEND_SLASH = False"
+echo ""
+echo "Then restart your Django server:"
+echo "sudo systemctl restart gunicorn  # or however you run Django"
+echo ""
+echo "Option 2: Fix in Next.js (Already Done)"
+echo "========================================"
+echo "The Next.js code has been updated to use trailing slashes."
+echo "Deploy the new build from /var/www/website/.next"
+echo ""
+echo "To deploy the updated Next.js app:"
+echo "1. Copy the .next folder to staging"
+echo "2. Run: npm ci --production"
+echo "3. Run: npm run start (or pm2 restart eavest-staging)"
+echo ""
+echo "The login endpoint is being called correctly with trailing slash:"
+echo "http://localhost:8000/api/login/"
+echo ""
